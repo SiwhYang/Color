@@ -3,6 +3,7 @@ import colour.plotting
 from colour.plotting.diagrams import render
 import matplotlib.pyplot as plt
 import numpy as np
+import math
 from ColorCheckerBoard import ColorCheckerBoard_2005
 
 
@@ -101,20 +102,24 @@ class ColorSpace():
         vector = np.array([[X],[Y],[Z]])
         Grayscale_1 = np.dot(matrix,vector) * scale
         Grayscale_2 = ((255**(Gamma-1))*Grayscale_1)**(1/Gamma) 
+        Grayscale_2[np.isnan(Grayscale_2)] = 0 # // convert nan to 0
         return Grayscale_2
     
-   
-    
+    def Calculation_XYZ2xyY (self,X,Y,Z):
+        x = X / (X+Y+Z)
+        y = Y / (X+Y+Z)
+        return x,y,Y
+
     def Calculation_xyY2XYZ (self,x,y,Y):
-            w = Y/y
-            X = x*w
-            Y = y*w
-            Z = (1-x-y)*w
-            return X,Y,Z
+        w = Y/y
+        X = x*w
+        Y = y*w
+        Z = (1-x-y)*w
+        return X,Y,Z
     
     def Calculation_XYZ2LAB(self,X,Y,Z):
         # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
-        target_RW_luminance = 100
+        target_RW_luminance = 1
         w = target_RW_luminance/self.Wy      
         RW_X = self.Wx*w
         RW_Y = self.Wy*w
@@ -131,7 +136,7 @@ class ColorSpace():
 
     def Calculation_LAB2XYZ(self,L,a,b):
         # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
-        target_RW_luminance = 100
+        target_RW_luminance = 1
         w = target_RW_luminance/self.Wy      
         RW_X = self.Wx*w
         RW_Y = self.Wy*w
@@ -141,17 +146,16 @@ class ColorSpace():
         Z = RW_Z* ((L+16)/116 - (b/200))**3
         return X, Y, Z
     
-    def Plot_ColorSpace(self,coordinate_x, coordinate_y):
+    def Plot_ColorSpace(self,coordinate_x, coordinate_y,plotcolor):
         plt.figure(figsize=[24,24])
         fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
         D65 = [0.313,0.329]
-        plotcolor = ["Red","Green","Blue"]
+        # plotcolor = ["Red","Green","Blue","black"]
         for i in range (len (coordinate_x)):
-            axes.plot( coordinate_x[i], coordinate_y[i], 'o-', color='black')   
+            axes.plot( coordinate_x[i], coordinate_y[i], 'o-', color=plotcolor)   
             # axes.annotate(i+1, (coordinate_x[i], coordinate_y[i])) 
         # srgb = colour.models.RGB_COLOURSPACE_sRGB.primaries
         axes.plot( D65[0], D65[1], 'o-', color='black',label='D65')#
-        
         axes.legend(facecolor='C8')
         # fig.savefig('CIE_xy.jpg',dpi=600)
         fig.show()
@@ -163,3 +167,11 @@ class ColorSpace():
 
 
 
+if __name__ == "__main__" :
+    ColorSpace = ColorSpace(
+        0.596441999, 0.355781034, \
+        0.297029107, 0.574883202, \
+        0.151284294, 0.074234338, \
+        0.264637327, 0.275447912)
+    ColorSpace.Setting_sRGB()
+    ColorSpace.Calculation_XYZ2RGB(0.313,0.329,0.358)
