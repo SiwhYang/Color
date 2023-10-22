@@ -5,21 +5,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ColorCheckerBoard import ColorCheckerBoard_2005
 from ColorSpace import ColorSpace
-from Device_Idpendence_Transformation import Device_Idpendence_Transformation
-
 
 # // Willy state :
 # // Colorspace class construct color spcae by giving rgbw cooridnate
 # // 1. calculate RGB <-> XYZ matrix 2. tansform from RGB <-> XYZ by matrix
-# // Device_Idpendence_Transformation class is used to doing transformation between xyY <-> XYZ <-> LAB
-# // ColorCheckerBoard class is some data
+# // 3.  transformation between xyY <-> XYZ <-> LAB
+# // ColorCheckerBoard class collect 24 color checkerboard data
 # //
 
 class Color_Application():
 
     def __init__(self,Rx, Ry, Gx, Gy, Bx, By, Wx, Wy):
         self.Color = ColorSpace(Rx, Ry, Gx, Gy, Bx, By, Wx, Wy)
-        self.Trans = Device_Idpendence_Transformation()
         self.board = ColorCheckerBoard_2005()
 
     def Calculation_RYGYBY(self,WY):
@@ -46,9 +43,30 @@ class Color_Application():
 
    
     def Calculation_ResizeColorSpace(self):
-        # // Willy : Resize standard to new color space, in order to construction new space with adjusted primary
-        # // Advantage : ensure R,G,B = (1,1,1) is the D65, every color is continuous within this space
-        # // Disadvantage : every color within this space wouold move from standard color space  
+        # // Case : ILI9341 has red issue
+        # // Resize standard to new color space, in order to construction new space with adjusted primary
+        standard_color = []
+        grayscale = []
+        resize_color = []
+        for color in self.board.CIExyY_D50.color_value():
+            # // choose 24 color chart (D50) and get its graysacle
+            # // This grayscale is not correct, cuase the sRGB provide more complex transformation than simply gamma transformation
+            # // but our goal is just compare color shift in same grayscale, the absolute value of grayscale matters little
+            self.Color.Setting_sRGB()
+            self.Color.Setting_D50()
+            X, Y, Z = self.Color.Calculation_xyY2XYZ(color[0],color[1],color[2]/100)
+            grayscale_element = self.Color.Calculation_XYZ2RGB(X, Y, Z,Gamma=2.2)  
+            grayscale.append(grayscale_element)
+
+            # // calculate sRGB lab
+            # self.Color.Setting_sRGB()
+            # self.Color.Setting_NewColorSpace( 0.596441999, 0.355781034, \
+            # 0.297029107, 0.574883202, \
+            # 0.151284294, 0.074234338, \
+            # 0.264637327, 0.275447912) # // ILI9341 color
+            # self.Color.Calculation_RGB2XYZ()
+
+        print((grayscale))  
         return
 
        
@@ -57,6 +75,7 @@ class Color_Application():
         # // Willy : cutting out the color space
         # // Advantage : ervery color is same as standard color space which is overlap
         # // Disadvantage : color is not continuous when is face cutting part
+     
         return
     
     # // Verification module
@@ -130,8 +149,5 @@ if __name__ == "__main__" :
         0.151284294, 0.074234338, \
         0.264637327, 0.275447912) # ILI9341
     # Application.Color.Setting_sRGB()
+    print(Application.Calculation_ResizeColorSpace())
     
-    # print(Application.Calculation_RYGYBY(700))
-    # print(Application.Calculation_RGB2newcolor_ratio(0.313,0.329))
-    X,Y,Z = Application.Trans.Calculation_xyY2XYZ(0.264637327, 0.275447912,100)
-    print(Application.Color.Calculation_XYZ2RGB(X,Y,Z))

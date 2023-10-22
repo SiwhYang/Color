@@ -9,11 +9,13 @@ class Manipulate():
     
 
 class ColorCheckerBoard_2005():
+    # // NOTE !! the Y is setting 100%, this means 10.08 means 10.08% of maximum Y
+    # // Beware of RGB2XYZ or XYZ2 RGB matrix transformation setting Y in 1 nits 
     def __init__(self):
-        self.CIExyY = self.CIExyY()
+        self.CIExyY_D50 = self.CIExyY_D50()
         self.CIELAB_D50 = self.CIELAB_D50()
 
-    class CIExyY(Manipulate):
+    class CIExyY_D50(Manipulate):
         def __init__(self):
             self.Dark_skin = [0.4316, 0.3777 ,10.08]
             self.Light_skin = [0.4197, 0.3744, 34.95]

@@ -7,6 +7,7 @@ from ColorCheckerBoard import ColorCheckerBoard_2005
 
 
 class ColorSpace():
+
     def __init__(self,Rx, Ry, Gx, Gy, Bx, By, Wx, Wy):
         self.Rx = Rx
         self.Ry = Ry
@@ -30,6 +31,17 @@ class ColorSpace():
     def Setting_W(self,Wx,Wy):
         self.Wx = Wx
         self.Wy = Wy
+    def Setting_NewColorSpace(self,Rx,Ry,Gx,Gy,Bx,By,Wx,Wy):
+        self.Rx = Rx
+        self.Ry = Ry
+        self.Gx = Gx
+        self.Gy = Gy
+        self.Bx = Bx
+        self.By = By
+        self.Wx = Wx
+        self.Wy = Wy
+        self.RGB2XYZ_matrix = self.Calculation_RGB2XYZ_matrix()
+        self.XYZ2RGB_matrix = self.Calculation_XYZ2RGB_matrix()
     def Setting_sRGB(self):
         self.Setting_R(0.64, 0.33)
         self.Setting_G(0.30, 0.60)
@@ -68,21 +80,67 @@ class ColorSpace():
             for column in range(3) :
                 RGB2XYZ_matrix[column][row] = RGB2XYZ_matrix[column][row]*x[row]
         return RGB2XYZ_matrix
-
+    
     def Calculation_XYZ2RGB_matrix(self, WY=1):
         matrix = np.linalg.inv(self.Calculation_RGB2XYZ_matrix())
         return matrix
     
-    def Calculation_XYZ2RGB(self,X,Y,Z):
-        # // Willy : default setting is gamma = 2.2
-        matrix = self.Calculation_XYZ2RGB_matrix()
-        a = 100/((255)**2.2)
-        scale = 255/100 # // rescale maximum luminance to grayscale 255
-        vector = np.array([[X],[Y],[Z]])
-        result = np.dot(matrix,vector) * scale
-        return ((255**(1.2))*result)**(1/2.2)
+    def Calculation_RGB2XYZ(self,R,G,B,Gamma = 2.2):
+        RGBvector = np.array([[R],[G],[B]])
+        vector = (1/(255**Gamma))*RGBvector**Gamma
+        matrix = self.Calculation_RGB2XYZ_matrix()
+        Result = np.dot(matrix,vector)
+        return Result
     
 
+    def Calculation_XYZ2RGB(self,X,Y,Z,Gamma = 2.2):
+        # // Willy : default setting is gamma = 2.2,
+        # // we first give the grayscale of gamma1.0, by using matrix of XYZ2RGB
+        matrix = self.Calculation_XYZ2RGB_matrix()
+        scale = 255/1 # // rescale maximum luminance to grayscale 255
+        vector = np.array([[X],[Y],[Z]])
+        Grayscale_1 = np.dot(matrix,vector) * scale
+        Grayscale_2 = ((255**(Gamma-1))*Grayscale_1)**(1/Gamma) 
+        return Grayscale_2
+    
+   
+    
+    def Calculation_xyY2XYZ (self,x,y,Y):
+            w = Y/y
+            X = x*w
+            Y = y*w
+            Z = (1-x-y)*w
+            return X,Y,Z
+    
+    def Calculation_XYZ2LAB(self,X,Y,Z):
+        # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
+        target_RW_luminance = 100
+        w = target_RW_luminance/self.Wy      
+        RW_X = self.Wx*w
+        RW_Y = self.Wy*w
+        RW_Z = (1-self.Wx-self.Wy)*w
+        def f ( t ):
+            if t > (6/29)**3 :
+                return t **(1/3)
+            else :
+                return ((1/3) * (29/6)**2 )*t + 16/116
+        L = 116*(f(Y/RW_Y)) -16
+        a = 500*(f(X/RW_X)-f(Y/RW_Y))
+        b = 200*(f(Y/RW_Y)-f(Z/RW_Z))
+        return L, a, b
+
+    def Calculation_LAB2XYZ(self,L,a,b):
+        # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
+        target_RW_luminance = 100
+        w = target_RW_luminance/self.Wy      
+        RW_X = self.Wx*w
+        RW_Y = self.Wy*w
+        RW_Z = (1-self.Wx-self.Wy)*w
+        X = RW_X* ((L+16)/116 + (a/500))**3
+        Y = RW_Y* ((L+16)/116 )**3
+        Z = RW_Z* ((L+16)/116 - (b/200))**3
+        return X, Y, Z
+    
     def Plot_ColorSpace(self,coordinate_x, coordinate_y):
         plt.figure(figsize=[24,24])
         fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
@@ -100,134 +158,6 @@ class ColorSpace():
         plt.show()
 
 
-
-class Color_Application():
-    def __init__(self):
-        self.CS = self.colorspace
-        self.Trans = self.transformation
-
-    def Calculation_RYGYBY(self,WY):
-        # // Willy : We get WY = RY*R + GY*G + BY*B from matrix expansion, where (R,G,B) = (1,1,1) denote white,
-        # // RY, GY, BY could simply denote the luminance contriburtion of primary to white  
-        # // Example : NTSC return RY = 0.2989, GY = 0.5864, BY = 0.1146
-        # // this is how Gray = 0.299 * Red + 0.587 * Green + 0.114 * Blue coming from
-        matrix = self.Calculation_RGB2XYZ_matrix(WY)
-        RY = matrix[1][0]
-        GY = matrix[1][1]
-        BY = matrix[1][2]
-        return RY, GY, BY
-
- 
-
-    def Calculation_RGB2newcolor_ratio(self,x,y):
-        # // Willy : WY is arbitrary since we would do normalize,
-        # // If normalize is canceled, the vector should be careful for its length (reference to Calculation_RGB2XYZ_matrix )
-        matrix = self.Calculation_RGB2XYZ_matrix(1)
-        vector = np.array([x,y,(1-x-y)])
-        x = np.linalg.solve(matrix,vector)
-        # // Normalize
-        c = x[0]+x[1]+x[2]
-        ratio = x/c
-        return ratio
-
-   
-
-    # // transformation module of color space (device independence)
-    
-
- 
-    def Calculation_XYZ2LUV_coordinate(self):
-        # // Reference white is using self.Wx, self.Wy. 1nits Be Careful of the difference of RW
-        return
-
-
-    def Calculation_ResizeColorSpace(self):
-        # // Willy : Resize standard to new color space, in order to construction new space with adjusted primary
-        # // Advantage : ensure R,G,B = (1,1,1) is the D65, every color is continuous within this space
-        # // Disadvantage : every color within this space wouold move from standard color space  
-        return
-
-       
-
-    def Calculation_CuttingColorSpace(self):
-        # // Willy : cutting out the color space
-        # // Advantage : ervery color is same as standard color space which is overlap
-        # // Disadvantage : color is not continuous when is face cutting part
-        return
-    
-    # // Verification module
-    def Verification(self):
-        f1 = open("LabRef.txt",'r')
-        f2 = open("measure.txt",'r')
-        L_standard = []
-        a_standard = []
-        b_standard = []
-        color = []
-        L_measure = []
-        a_measure = []
-        b_measure = []
-        for line in f1.readlines():
-            data = line.split()
-            L_standard.append(float(data[0]))
-            a_standard.append(float(data[1]))
-            b_standard.append(float(data[2]))
-            # print(data)
-            # color.append(hex(data[3]))
-        for line in f2.readlines():
-            data = line.split()
-            L_measure.append(float(data[4]))
-            a_measure.append(float(data[5]))
-            b_measure.append(float(data[6]))
-        return 
-
-
-    def Plot_Verification(self):
-        f1 = open("LabRef.txt",'r')
-        f2 = open("measure.txt",'r')
-        L_standard = []
-        a_standard = []
-        b_standard = []
-        color = []
-        L_measure = []
-        a_measure = []
-        b_measure = []
-        for line in f1.readlines():
-            data = line.split()
-            L_standard.append(float(data[0]))
-            a_standard.append(float(data[1]))
-            b_standard.append(float(data[2]))
-            # print(data)
-            # color.append(hex(data[3]))
-        for line in f2.readlines():
-            data = line.split()
-            L_measure.append(float(data[4]))
-            a_measure.append(float(data[5]))
-            b_measure.append(float(data[6]))
-        for i in range(len(L_standard)):
-            plt.scatter(a_standard[i],b_standard[i],c = 'black')
-            plt.scatter(a_measure[i],b_measure[i], c = 'b')
-            plt.annotate(i+1, (a_standard[i],b_standard[i]))
-        plt.xlim(-70,80)
-        plt.ylim(-70,100)
-        plt.show()
-        # return L,a,b
-      
-    
-
-    
-    
-       
-if __name__ == "__main__" :
-
-    # initialize the class
-    Application = Color_Application()
-    Application.CS.Setting_R(0.596441999, 0.355781034)
-    Application.CS.Setting_G(0.297029107, 0.574883202)
-    Application.CS.Setting_B(0.151284294, 0.074234338)
-    Application.CS.Setting_W(0.264637327, 0.275447912)
-    # a = ColorSpace(0.6758,0.3132105,0.19,0.7,0.1509,0.03039,0.31272,0.32903) # // purple
-
-    print(Application.CS.RGB2XYZ_matrix)
 
 
 
