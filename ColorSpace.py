@@ -173,5 +173,4 @@ if __name__ == "__main__" :
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
         0.264637327, 0.275447912)
-    ColorSpace.Setting_sRGB()
-    ColorSpace.Calculation_XYZ2RGB(0.313,0.329,0.358)
+    
