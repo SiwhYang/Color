@@ -43,7 +43,7 @@ class ColorSpace():
         self.Wy = Wy
         self.RGB2XYZ_matrix = self.Calculation_RGB2XYZ_matrix()
         self.XYZ2RGB_matrix = self.Calculation_XYZ2RGB_matrix()
-    def Setting_sRGB(self):
+    def Setting_sRGB_D65(self):
         self.Setting_R(0.64, 0.33)
         self.Setting_G(0.30, 0.60)
         self.Setting_B(0.15, 0.06)
@@ -160,11 +160,6 @@ class ColorSpace():
         # fig.savefig('CIE_xy.jpg',dpi=600)
         fig.show()
         plt.show()
-
-
-
-
-
 
 
 if __name__ == "__main__" :
