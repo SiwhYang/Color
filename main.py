@@ -77,9 +77,9 @@ class Color_Application():
             standard_color_xy.append([x,y,Y])
         
         nits_per_grayscale = 1#178/255
-        self.Color.Setting_NewColorSpace( 0.596441999, 0.355781034, \
-        0.297029107, 0.574883202, \
-        0.151284294, 0.074234338, \
+        self.Color.Setting_NewColorSpace( 0.576441999, 0.355781034, \
+        0.297029107, 0.564883202, \
+        0.141284294, 0.074234338, \
         0.264637327, 0.280447912) # // ILI9341 color
         Old_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix(nits_per_grayscale)
 
@@ -207,11 +207,10 @@ class Color_Application():
 if __name__ == "__main__" :
 
     # initialize the class
-    Application = Color_Application(
-        0.596441999, 0.355781034, \
+    Application = Color_Application(0.596441999, 0.355781034, \
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
-        0.264637327, 0.275447912) # ILI9341
+        0.264637327, 0.280447912) # // ILI9341 color
         
     def RGB_trans(a,b):
         return np.dot(a,b)
