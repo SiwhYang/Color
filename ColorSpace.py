@@ -86,18 +86,18 @@ class ColorSpace():
         matrix = np.linalg.inv(self.Calculation_RGB2XYZ_matrix())
         return matrix
     
-    def Calculation_RGB2XYZ(self,R,G,B,Gamma = 2.2):
+    def Calculation_RGB2XYZ(self,R,G,B,Gamma = 2.2, WY = 1):
         RGBvector = np.array([[R],[G],[B]])
         vector = (1/(255**Gamma))*RGBvector**Gamma
-        matrix = self.Calculation_RGB2XYZ_matrix()
+        matrix = self.Calculation_RGB2XYZ_matrix(WY = WY)
         Result = np.dot(matrix,vector)
         return Result
     
 
-    def Calculation_XYZ2RGB(self,X,Y,Z,Gamma = 2.2):
+    def Calculation_XYZ2RGB(self,X,Y,Z,Gamma = 2.2, WY = 1):
         # // Willy : default setting is gamma = 2.2,
         # // we first give the grayscale of gamma1.0, by using matrix of XYZ2RGB
-        matrix = self.Calculation_XYZ2RGB_matrix()
+        matrix = self.Calculation_XYZ2RGB_matrix(WY = WY)
         scale = 255/1 # // rescale maximum luminance to grayscale 255
         vector = np.array([[X],[Y],[Z]])
         Grayscale_1 = np.dot(matrix,vector) * scale
@@ -117,9 +117,8 @@ class ColorSpace():
         Z = (1-x-y)*w
         return X,Y,Z
     
-    def Calculation_XYZ2LAB(self,X,Y,Z):
+    def Calculation_XYZ2LAB(self,X,Y,Z,target_RW_luminance = 1):
         # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
-        target_RW_luminance = 1
         w = target_RW_luminance/self.Wy      
         RW_X = self.Wx*w
         RW_Y = self.Wy*w
@@ -134,9 +133,8 @@ class ColorSpace():
         b = 200*(f(Y/RW_Y)-f(Z/RW_Z))
         return L, a, b
 
-    def Calculation_LAB2XYZ(self,L,a,b):
+    def Calculation_LAB2XYZ(self,L,a,b,target_RW_luminance = 1):
         # // Reference white is using self.Wx, self.Wy, 1nits Be Careful of the difference of RW
-        target_RW_luminance = 1
         w = target_RW_luminance/self.Wy      
         RW_X = self.Wx*w
         RW_Y = self.Wy*w

@@ -47,6 +47,11 @@ class Color_Application():
         # // Case : for ILI9341 primary color shift issue, 1st solution
         # // Resize standard to new color space, in order to construction 
         # // new space with adjusted primary ---->> RGB=(1,1,1) = D65
+        # // 1. We then compare -->> give same grayscale, 
+        # XYZ (sRGB) vs XYZ (old ILI9341), 
+        # XYZ (sRGB) vs XYZ (New ILI9341),
+        # then we give color correction matrix (CCM) by np.dot(inv(srgb),Ili)
+        # We can obtain the (R,G,B) needed to 
         grayscale = []
         standard_color = []
         resize_color = []
@@ -70,52 +75,69 @@ class Color_Application():
             L,a,b = self.Color.Calculation_XYZ2LAB(X,Y,Z)
             standard_color.append([L,a,b])
             standard_color_xy.append([x,y,Y])
-        # // calculate Ili9341 lab
+        
         self.Color.Setting_NewColorSpace( 0.596441999, 0.355781034, \
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
         0.264637327, 0.275447912) # // ILI9341 color
+        Old_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix()
+
+        # // calculate Ili9341 New color space
+        New_White_ratio = self.Calculation_RGB2newcolor_ratio(0.3127,0.329)
+        scale = 1/np.max(New_White_ratio)
+        New_White_ratio = New_White_ratio*scale
+        New_White_Brigthness = np.dot(Old_ILI9341_RGB2XYZ_Matrix,New_White_ratio)[1]
         self.Color.Setting_W(0.3127,0.329) # // KEY part !!!!!!!!!!
         for i in range(0,len(grayscale)):
-            X,Y,Z = self.Color.Calculation_RGB2XYZ(grayscale[i][0][0],grayscale[i][1][0],grayscale[i][2][0])
+            X,Y,Z = self.Color.Calculation_RGB2XYZ(grayscale[i][0][0],grayscale[i][1][0],grayscale[i][2][0],WY = New_White_Brigthness)
             x,y,Y = self.Color.Calculation_XYZ2xyY(X,Y,Z)
-            L,a,b = self.Color.Calculation_XYZ2LAB(X,Y,Z)
+            L,a,b = self.Color.Calculation_XYZ2LAB(X,Y,Z,target_RW_luminance = New_White_Brigthness)
             resize_color.append([L,a,b])
             resize_color_xy.append([x,y,Y])
 
+        # // Calulate New matrix
+        New_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix(WY = New_White_Brigthness)
+        inv_New_ILI9341_RGB2XYZ_Matrix = np.linalg.inv(New_ILI9341_RGB2XYZ_Matrix)
+        # // (RGB)_ILI9341 = (CCM)(RGB)_sRGB ---> CCM matrix provide transformaiton between old and new 
+        # // In order to get same XYZ
+        Color_Correction_Matrix = np.dot(Old_ILI9341_RGB2XYZ_Matrix,inv_New_ILI9341_RGB2XYZ_Matrix)
+        # Color_Correction_Matrix = np.dot(Old_ILI9341_RGB2XYZ_Matrix,inv_sRGB_RGB2XYZ_Matrix)
+        # 待驗證，預期可以用SRGB的24色灰階，得到ILI9341的新座標系，且255,255,255 = D65
+
+
         #  // prepare for compareing
-        standard_color_x = []
-        standard_color_y = []
-        resize_color_x = []
-        resize_color_y =[]
-        plt.figure(figsize=[24,24])
-        fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
-        for i in range(0,len(standard_color_xy)):
-            temp_a = [] #// use to plot connecting line between resize and standard
-            temp_b = []
-            standard_color_x.append(standard_color_xy[i][0][0])
-            standard_color_y.append(standard_color_xy[i][1][0])
-            resize_color_x.append(resize_color_xy[i][0][0])
-            resize_color_y.append(resize_color_xy[i][1][0])
-            temp_a.append([standard_color_xy[i][0][0],resize_color_xy[i][0][0]])
-            temp_b.append([standard_color_xy[i][1][0],resize_color_xy[i][1][0]])
-            axes.scatter(standard_color_x[i],standard_color_y[i],c = 'black')
-            axes.scatter(resize_color_x[i],resize_color_y[i], c = 'red')
-            axes.plot(temp_a[0],temp_b[0],color = 'black')
-            axes.annotate(i+1, (standard_color_x[i],standard_color_y[i]))
-        # // plot for primary
-        ILIprimary_x = [0.596441999, 0.297029107,0.151284294,0.596441999]
-        ILIprimary_y = [0.355781034, 0.574883202,0.074234338,0.355781034]
-        self.Color.Setting_sRGB_D65()
-        sRGBprimary_x = [self.Color.Rx,self.Color.Gx,self.Color.Bx,self.Color.Rx]
-        sRGBprimary_y = [self.Color.Ry,self.Color.Gy,self.Color.By,self.Color.Ry]
-        axes.plot(sRGBprimary_x,sRGBprimary_y,color='black',label = 'sRGB')
-        axes.plot(ILIprimary_x,ILIprimary_y,color = 'red',label = 'ILI9341')
-        axes.legend()
-        fig.show()
-        plt.show()
+        # standard_color_x = []
+        # standard_color_y = []
+        # resize_color_x = []
+        # resize_color_y =[]
+        # plt.figure(figsize=[24,24])
+        # fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
+        # for i in range(0,len(standard_color_xy)):
+        #     temp_a = [] #// use to plot connecting line between resize and standard
+        #     temp_b = []
+        #     standard_color_x.append(standard_color_xy[i][0][0])
+        #     standard_color_y.append(standard_color_xy[i][1][0])
+        #     resize_color_x.append(resize_color_xy[i][0][0])
+        #     resize_color_y.append(resize_color_xy[i][1][0])
+        #     temp_a.append([standard_color_xy[i][0][0],resize_color_xy[i][0][0]])
+        #     temp_b.append([standard_color_xy[i][1][0],resize_color_xy[i][1][0]])
+        #     axes.scatter(standard_color_x[i],standard_color_y[i],c = 'black')
+        #     axes.scatter(resize_color_x[i],resize_color_y[i], c = 'red')
+        #     axes.plot(temp_a[0],temp_b[0],color = 'black')
+        #     axes.annotate(i+1, (standard_color_x[i],standard_color_y[i]))
+        # # // plot for primary
+        # ILIprimary_x = [0.596441999, 0.297029107,0.151284294,0.596441999]
+        # ILIprimary_y = [0.355781034, 0.574883202,0.074234338,0.355781034]
+        # self.Color.Setting_sRGB_D65()
+        # sRGBprimary_x = [self.Color.Rx,self.Color.Gx,self.Color.Bx,self.Color.Rx]
+        # sRGBprimary_y = [self.Color.Ry,self.Color.Gy,self.Color.By,self.Color.Ry]
+        # axes.plot(sRGBprimary_x,sRGBprimary_y,color='black',label = 'sRGB')
+        # axes.plot(ILIprimary_x,ILIprimary_y,color = 'red',label = 'ILI9341')
+        # axes.legend()
+        # fig.show()
+        # plt.show()
         
-        # // prepare for compareing
+        # # // prepare for compareing
         # standard_color_a = []
         # standard_color_b = []
         # resize_color_a = []
@@ -141,7 +163,7 @@ class Color_Application():
         # plt.ylim(-70,100)
         # plt.show()
         
-        return
+        return Color_Correction_Matrix
 
     def Calculation_CuttingColorSpace(self):
         # // Case : for ILI9341 primary color shift issue, 2nd solution
@@ -161,6 +183,11 @@ if __name__ == "__main__" :
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
         0.264637327, 0.275447912) # ILI9341
-    Application.Calculation_ResizeColorSpace()
+    # print(Application.Calculation_ResizeColorSpace())
     # print(Application.Calculation_RYGYBY(178.41562))
-    
+
+    def RGB_trans(a,b):
+        return np.dot(a,b)
+    RGB = (255,255,255)
+    # print(RGB_trans(RGB,Application.Calculation_ResizeColorSpace()))
+    print(Application.Calculation_ResizeColorSpace())
