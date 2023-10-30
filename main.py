@@ -76,32 +76,42 @@ class Color_Application():
             standard_color.append([L,a,b])
             standard_color_xy.append([x,y,Y])
         
+        nits_per_grayscale = 1#178/255
         self.Color.Setting_NewColorSpace( 0.596441999, 0.355781034, \
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
-        0.264637327, 0.275447912) # // ILI9341 color
-        Old_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix()
+        0.264637327, 0.280447912) # // ILI9341 color
+        Old_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix(nits_per_grayscale)
 
         # // calculate Ili9341 New color space
         New_White_ratio = self.Calculation_RGB2newcolor_ratio(0.3127,0.329)
         scale = 1/np.max(New_White_ratio)
         New_White_ratio = New_White_ratio*scale
-        New_White_Brigthness = np.dot(Old_ILI9341_RGB2XYZ_Matrix,New_White_ratio)[1]
+        New_White_Brigthness = np.dot(Old_ILI9341_RGB2XYZ_Matrix,New_White_ratio)[1] # // 0.7498773
+        
+        # print(New_White_ratio)
         self.Color.Setting_W(0.3127,0.329) # // KEY part !!!!!!!!!!
         for i in range(0,len(grayscale)):
-            X,Y,Z = self.Color.Calculation_RGB2XYZ(grayscale[i][0][0],grayscale[i][1][0],grayscale[i][2][0],WY = New_White_Brigthness)
+            X,Y,Z = self.Color.Calculation_RGB2XYZ(grayscale[i][0][0],grayscale[i][1][0],grayscale[i][2][0],WY = New_White_Brigthness*nits_per_grayscale)
             x,y,Y = self.Color.Calculation_XYZ2xyY(X,Y,Z)
-            L,a,b = self.Color.Calculation_XYZ2LAB(X,Y,Z,target_RW_luminance = New_White_Brigthness)
+            L,a,b = self.Color.Calculation_XYZ2LAB(X,Y,Z,target_RW_luminance = New_White_Brigthness*nits_per_grayscale)
             resize_color.append([L,a,b])
             resize_color_xy.append([x,y,Y])
 
         # // Calulate New matrix
-        New_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix(WY = New_White_Brigthness)
+        New_ILI9341_RGB2XYZ_Matrix = self.Color.Calculation_RGB2XYZ_matrix(WY = New_White_Brigthness*nits_per_grayscale)
         inv_New_ILI9341_RGB2XYZ_Matrix = np.linalg.inv(New_ILI9341_RGB2XYZ_Matrix)
+        inv_Old_ILI9341_RGB2XYZ_Matrix = np.linalg.inv(Old_ILI9341_RGB2XYZ_Matrix)
         # // (RGB)_ILI9341 = (CCM)(RGB)_sRGB ---> CCM matrix provide transformaiton between old and new 
         # // In order to get same XYZ
-        Color_Correction_Matrix = np.dot(Old_ILI9341_RGB2XYZ_Matrix,inv_New_ILI9341_RGB2XYZ_Matrix)
-        # Color_Correction_Matrix = np.dot(Old_ILI9341_RGB2XYZ_Matrix,inv_sRGB_RGB2XYZ_Matrix)
+        Color_Correction_Matrix = np.dot(inv_New_ILI9341_RGB2XYZ_Matrix,Old_ILI9341_RGB2XYZ_Matrix)
+        inv_Color_Correction_Matrix = np.linalg.inv(Color_Correction_Matrix)
+        upper_limit_Old_RGB = np.array([[255],[255],[255]])
+        upper_limit_New_RGB = np.linalg.solve(Color_Correction_Matrix,upper_limit_Old_RGB)
+        # print(np.dot(Color_Correction_Matrix,upper_limit_New_RGB))
+        # print(upper_limit_New_RGB)
+        # (R,G,B)new = (CCM)(R,G,B)old --> since we sacrifice birghtness to match new color space
+        # (255,255,255)old would give new rgb over 255, we need new upper limit of old (R,G,B)old_upper limit = (255,188,116)
         # 待驗證，預期可以用SRGB的24色灰階，得到ILI9341的新座標系，且255,255,255 = D65
 
 
@@ -162,8 +172,27 @@ class Color_Application():
         # plt.xlim(-70,80)
         # plt.ylim(-70,100)
         # plt.show()
-        
-        return Color_Correction_Matrix
+
+
+        # For first return give CCM 
+        # def RGB_trans(a,b):
+        # return np.dot(a,b)
+        # RGB = np.array([[255],[255],[255]])
+        # new_grayscale = RGB_trans(Application.Calculation_ResizeColorSpace()[0],RGB)
+        # new_grayscale = np.array([new_grayscale[0],new_grayscale[1],new_grayscale[2]])
+        # print("new_grayscale = ", new_grayscale)
+        # result = (np.dot(Application.Calculation_ResizeColorSpace()[1],new_grayscale))/255*185
+        # print("new white coordinate = ", result)
+
+        # For second return this give 126, 133, 145 which means 0.313,0.329 at 133 nits
+        # def RGB_trans(a,b):
+        #     return np.dot(a,b)
+        # RGB = np.array([[255],[188],[116]])
+        # print(RGB_trans(Application.Calculation_ResizeColorSpace()[1],RGB))
+
+
+        return inv_Color_Correction_Matrix, Old_ILI9341_RGB2XYZ_Matrix
+
 
     def Calculation_CuttingColorSpace(self):
         # // Case : for ILI9341 primary color shift issue, 2nd solution
@@ -183,11 +212,14 @@ if __name__ == "__main__" :
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
         0.264637327, 0.275447912) # ILI9341
-    # print(Application.Calculation_ResizeColorSpace())
-    # print(Application.Calculation_RYGYBY(178.41562))
-
+        
     def RGB_trans(a,b):
         return np.dot(a,b)
-    RGB = (255,255,255)
-    # print(RGB_trans(RGB,Application.Calculation_ResizeColorSpace()))
-    print(Application.Calculation_ResizeColorSpace())
+    RGB = np.array([[255],[255],[255]])
+    new_grayscale = RGB_trans(Application.Calculation_ResizeColorSpace()[0],RGB)
+    new_grayscale = np.array([new_grayscale[0],new_grayscale[1],new_grayscale[2]])
+    print("new_grayscale = ", new_grayscale)
+    result = (np.dot(Application.Calculation_ResizeColorSpace()[1],new_grayscale))/255*185
+    print("new white coordinate = ", result)
+    # print(result)
+    # Application.Calculation_ResizeColorSpace()
