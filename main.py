@@ -207,7 +207,8 @@ class Color_Application():
 if __name__ == "__main__" :
 
     # initialize the class
-    Application = Color_Application(0.596441999, 0.355781034, \
+    Application = Color_Application( \
+        0.596441999, 0.355781034, \
         0.297029107, 0.574883202, \
         0.151284294, 0.074234338, \
         0.264637327, 0.280447912) # // ILI9341 color
@@ -216,9 +217,11 @@ if __name__ == "__main__" :
         return np.dot(a,b)
     RGB = np.array([[255],[255],[255]])
     new_grayscale = RGB_trans(Application.Calculation_ResizeColorSpace()[0],RGB)
-    new_grayscale = np.array([new_grayscale[0],new_grayscale[1],new_grayscale[2]])
+    print(Application.Calculation_ResizeColorSpace()[0])
     print("new_grayscale = ", new_grayscale)
-    result = (np.dot(Application.Calculation_ResizeColorSpace()[1],new_grayscale))/255*185
-    print("new white coordinate = ", result)
+    nits_per_grayscale = 185/255
+    # result = (np.dot(Application.Calculation_ResizeColorSpace()[0],new_grayscale))*nits_per_grayscale
+    # print("new white coordinate = ", result)
+
     # print(result)
     # Application.Calculation_ResizeColorSpace()
