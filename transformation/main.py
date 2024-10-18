@@ -116,36 +116,36 @@ class Color_Application():
 
 
         #  // prepare for compareing
-        # standard_color_x = []
-        # standard_color_y = []
-        # resize_color_x = []
-        # resize_color_y =[]
-        # plt.figure(figsize=[24,24])
-        # fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
-        # for i in range(0,len(standard_color_xy)):
-        #     temp_a = [] #// use to plot connecting line between resize and standard
-        #     temp_b = []
-        #     standard_color_x.append(standard_color_xy[i][0][0])
-        #     standard_color_y.append(standard_color_xy[i][1][0])
-        #     resize_color_x.append(resize_color_xy[i][0][0])
-        #     resize_color_y.append(resize_color_xy[i][1][0])
-        #     temp_a.append([standard_color_xy[i][0][0],resize_color_xy[i][0][0]])
-        #     temp_b.append([standard_color_xy[i][1][0],resize_color_xy[i][1][0]])
-        #     axes.scatter(standard_color_x[i],standard_color_y[i],c = 'black')
-        #     axes.scatter(resize_color_x[i],resize_color_y[i], c = 'red')
-        #     axes.plot(temp_a[0],temp_b[0],color = 'black')
-        #     axes.annotate(i+1, (standard_color_x[i],standard_color_y[i]))
-        # # // plot for primary
-        # ILIprimary_x = [0.596441999, 0.297029107,0.151284294,0.596441999]
-        # ILIprimary_y = [0.355781034, 0.574883202,0.074234338,0.355781034]
-        # self.Color.Setting_sRGB_D65()
-        # sRGBprimary_x = [self.Color.Rx,self.Color.Gx,self.Color.Bx,self.Color.Rx]
-        # sRGBprimary_y = [self.Color.Ry,self.Color.Gy,self.Color.By,self.Color.Ry]
-        # axes.plot(sRGBprimary_x,sRGBprimary_y,color='black',label = 'sRGB')
-        # axes.plot(ILIprimary_x,ILIprimary_y,color = 'red',label = 'ILI9341')
-        # axes.legend()
-        # fig.show()
-        # plt.show()
+        standard_color_x = []
+        standard_color_y = []
+        resize_color_x = []
+        resize_color_y =[]
+        plt.figure(figsize=[24,24])
+        fig, axes = colour.plotting.diagrams.plot_chromaticity_diagram_CIE1931(standalone=False)
+        for i in range(0,len(standard_color_xy)):
+            temp_a = [] #// use to plot connecting line between resize and standard
+            temp_b = []
+            standard_color_x.append(standard_color_xy[i][0][0])
+            standard_color_y.append(standard_color_xy[i][1][0])
+            resize_color_x.append(resize_color_xy[i][0][0])
+            resize_color_y.append(resize_color_xy[i][1][0])
+            temp_a.append([standard_color_xy[i][0][0],resize_color_xy[i][0][0]])
+            temp_b.append([standard_color_xy[i][1][0],resize_color_xy[i][1][0]])
+            axes.scatter(standard_color_x[i],standard_color_y[i],c = 'black')
+            axes.scatter(resize_color_x[i],resize_color_y[i], c = 'red')
+            axes.plot(temp_a[0],temp_b[0],color = 'black')
+            axes.annotate(i+1, (standard_color_x[i],standard_color_y[i]))
+        # // plot for primary
+        ILIprimary_x = [0.596441999, 0.297029107,0.151284294,0.596441999]
+        ILIprimary_y = [0.355781034, 0.574883202,0.074234338,0.355781034]
+        self.Color.Setting_sRGB_D65()
+        sRGBprimary_x = [self.Color.Rx,self.Color.Gx,self.Color.Bx,self.Color.Rx]
+        sRGBprimary_y = [self.Color.Ry,self.Color.Gy,self.Color.By,self.Color.Ry]
+        axes.plot(sRGBprimary_x,sRGBprimary_y,color='black',label = 'sRGB')
+        axes.plot(ILIprimary_x,ILIprimary_y,color = 'red',label = 'ILI9341')
+        axes.legend()
+        fig.show()
+        plt.show()
         
         # # // prepare for compareing
         # standard_color_a = []
